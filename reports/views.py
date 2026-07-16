@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import ReportFilter
-from .models import CrimeType, Evidence, Report, ReportTimeline
+from .models import CrimeType, Evidence, Report, ReportTimeline, Notification
 from .permissions import IsAdminOrOwnerOrReadOnly, IsAdminUser
 from .serializers import (
     CrimeTypeSerializer,
@@ -16,6 +16,7 @@ from .serializers import (
     ReportCreateSerializer,
     ReportSerializer,
     ReportTimelineSerializer,
+    NotificationSerializer
 )
 from .services import ReportService
 
@@ -159,3 +160,10 @@ class EvidenceViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
         instance = self.get_object()
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class NotificationViewSet(mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
