@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from .models import Notification, Report, ReportTimeline
 from .utils import generate_tracking_code
+from dashboard.models import SystemLog
 
 
 class ReportService:
@@ -28,7 +29,8 @@ class ReportService:
         report.tracking_code = cls.build_tracking_code()
         report.save(update_fields=['tracking_code'])
 
-        cls.create_timeline(report, note='Report submitted.', updated_by=requester)
+        cls.create_timeline(
+            report, note='Report submitted.', updated_by=requester)
         cls.create_notification(report, 'submitted', requester)
         return report
 
@@ -66,7 +68,13 @@ class ReportService:
         old_status = report.status
         report.status = status
         report.save(update_fields=['status', 'updated_at'])
-        cls.create_timeline(report, status=status, note=note or f'Status changed from {old_status} to {status}.', updated_by=updated_by)
+        cls.create_timeline(
+            report, status=status, note=note or f'Status changed from {old_status} to {status}.', updated_by=updated_by)
+        SystemLog.objects.create(
+            admin=updated_by if updated_by and updated_by.is_authenticated else None,
+            action=f'{updated_by.email if updated_by else "System"} changed report {report.tracking_code} from {old_status} to {status}',
+            target_report_id=report.id,
+        )
 
         if status == Report.STATUS_VERIFIED:
             cls.create_notification(report, 'verified', updated_by)
