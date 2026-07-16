@@ -61,6 +61,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 for c in self.user.emergency_contacts.all()
             ],
         }
+
+        if self.user.is_staff:
+            from dashboard.models import SystemLog
+            request = self.context.get('request')
+            ip = request.META.get('REMOTE_ADDR') if request else None
+            SystemLog.objects.create(
+                admin=self.user,
+                action=f'Admin session started — {self.user.email}',
+                ip_address=ip,
+            )
+
         return data
 
 
@@ -142,10 +153,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserListSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    report_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'phone_number',
-                  'is_staff', 'is_active', 'is_suspended', 'date_joined']
+        fields = ['id', 'email', 'first_name', 'role', 'is_staff',
+                  'is_active', 'is_suspended', 'date_joined', 'report_count']
+
+    def get_role(self, obj):
+        if obj.is_superuser:
+            return 'Super Admin'
+        if obj.is_staff:
+            return 'Admin'
+        return 'Reporter'
 
 
 class ChangePasswordSerializer(serializers.Serializer):
