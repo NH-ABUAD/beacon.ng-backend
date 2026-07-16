@@ -45,3 +45,28 @@ class DashboardOverviewView(APIView):
             'verification_rate': verification_rate,
             'reports_this_week': weekly_counts,
         })
+        
+class CrimeAnalyticsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        hotspots = (
+            Report.objects.values('address')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+
+        crime_type_breakdown = (
+            Report.objects.values('crime_type__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        return Response({
+            'top_hotspot_zones': [
+                {'address': h['address'], 'report_count': h['count']} for h in hotspots
+            ],
+            'crime_type_breakdown': [
+                {'crime_type': c['crime_type__name'], 'count': c['count']} for c in crime_type_breakdown
+            ],
+        })
