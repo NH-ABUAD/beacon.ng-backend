@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import CrimeType, Evidence, Report, ReportTimeline
+from .models import CrimeType, Evidence, Report, ReportTimeline, Notification
 from .validators import (
     validate_coordinate,
     validate_description,
@@ -145,3 +145,10 @@ class EvidenceSerializer(serializers.ModelSerializer):
         validated_data['mime_type'] = upload.content_type or 'application/octet-stream'
         validated_data['file_size'] = upload.size
         return super().create(validated_data)
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'title', 'message', 'is_read', 'created_at']
+        read_only_fields = ['id', 'title', 'message', 'created_at']
