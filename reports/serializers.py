@@ -67,7 +67,7 @@ class ReportCreateSerializer(serializers.ModelSerializer):
             return attrs
 
         if anonymous:
-            attrs['reporter'] = user
+            attrs['reporter'] = None
             attrs['anonymous'] = True
         else:
             attrs['reporter'] = user

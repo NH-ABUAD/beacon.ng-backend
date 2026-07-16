@@ -14,6 +14,9 @@ class ReportService:
     @classmethod
     @transaction.atomic
     def create_report(cls, data, requester=None):
+        anonymous = data.get('anonymous', False)
+        reporter = requester if requester and requester.is_authenticated and not anonymous else None
+
         report = Report.objects.create(
             crime_type=data['crime_type'],
             description=data['description'],
@@ -21,8 +24,8 @@ class ReportService:
             address=data['address'],
             latitude=data['latitude'],
             longitude=data['longitude'],
-            anonymous=data.get('anonymous', False),
-            reporter=requester if requester and requester.is_authenticated else None,
+            anonymous=anonymous,
+            reporter=reporter,
             status=Report.STATUS_PENDING,
             priority=data.get('priority', Report.PRIORITY_MEDIUM),
         )

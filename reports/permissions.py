@@ -7,7 +7,17 @@ class IsAdminOrOwnerOrReadOnly(BasePermission):
             return True
         if not request.user or not request.user.is_authenticated:
             return False
-        return bool(request.user.is_staff or request.user.is_superuser or obj.reporter_id == request.user.id)
+
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+
+        owner_id = None
+        if hasattr(obj, 'reporter_id'):
+            owner_id = obj.reporter_id
+        elif hasattr(obj, 'report') and obj.report is not None:
+            owner_id = obj.report.reporter_id
+
+        return bool(owner_id is not None and owner_id == request.user.id)
 
 
 class IsAdminUser(BasePermission):
