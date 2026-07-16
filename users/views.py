@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAdminUser
 from .serializers import ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer, UserProfileSerializer, UserListSerializer, ChangePasswordSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from django.db.models import Count
 
 
 class RegisterView(generics.CreateAPIView):
@@ -81,7 +82,7 @@ class MeView(generics.RetrieveUpdateAPIView):
 
 
 class UserListView(generics.ListAPIView):
-    queryset = User.objects.all().order_by('-date_joined')
+    queryset = User.objects.annotate(report_count=Count('reports')).order_by('-date_joined')
     serializer_class = UserListSerializer
     permission_classes = [IsAdminUser]
 
