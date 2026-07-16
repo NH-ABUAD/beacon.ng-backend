@@ -5,8 +5,8 @@ from .views import CrimeTypeViewSet, EvidenceViewSet, ReportViewSet
 
 router = DefaultRouter()
 router.register(r'crime-types', CrimeTypeViewSet, basename='crime-type')
-router.register(r'', ReportViewSet, basename='report')
 router.register(r'evidence', EvidenceViewSet, basename='evidence')
+router.register(r'', ReportViewSet, basename='report')
 
 urlpatterns = [
     path('', include(router.urls)),

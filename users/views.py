@@ -7,9 +7,11 @@ from django.core.mail import send_mail
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User
-from .models import PasswordResetOTP
-from .serializers import ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer
+from .models import User, PasswordResetOTP
+from rest_framework.permissions import IsAdminUser
+from .serializers import ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer, UserProfileSerializer, UserListSerializer, ChangePasswordSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 
 class RegisterView(generics.CreateAPIView):
@@ -68,3 +70,64 @@ class ResetPasswordView(APIView):
         otp.save()
 
         return Response({'detail': 'Password reset successful.'}, status=status.HTTP_200_OK)
+
+
+class MeView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserListSerializer
+    permission_classes = [IsAdminUser]
+
+
+class SuspendUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.is_suspended = not user.is_suspended
+        user.save()
+
+        return Response({
+            'id': user.id,
+            'email': user.email,
+            'is_suspended': user.is_suspended,
+        })
+
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data['refresh']
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({'detail': 'Logged out successfully.'}, status=status.HTTP_200_OK)
+        except (KeyError, TokenError):
+            return Response({'detail': 'Invalid or missing refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
