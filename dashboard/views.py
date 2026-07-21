@@ -21,9 +21,9 @@ from .serializers import SystemLogSerializer
 
 
 @extend_schema(
-    tags=["Dashboard"],
-    summary="List System Logs",
-    description="Returns all system logs. Only administrators can access this endpoint.",
+    tags=["Admin — Dashboard"],
+    summary="List system logs",
+    description="Returns the full admin audit trail — report actions and login sessions, with IP and timestamp. Admin-only.",
     responses={200: SystemLogSerializer(many=True)},
 )
 class SystemLogListView(generics.ListAPIView):
@@ -33,9 +33,9 @@ class SystemLogListView(generics.ListAPIView):
 
 
 @extend_schema(
-    tags=["Dashboard"],
-    summary="Dashboard Overview",
-    description="Returns dashboard statistics including report counts and weekly report trends.",
+    tags=["Admin — Dashboard"],
+    summary="Dashboard overview",
+    description="Returns total/pending/verified report counts, verification rate, and a 7-day (Mon–Sun) report count chart. Admin-only.",
     responses={
         200: OpenApiResponse(
             response=inline_serializer(
@@ -75,9 +75,10 @@ Example Response
     {"day":"SUN","count":7}
   ]
 }
+```
 """
-)
-},
+        )
+    },
 )
 class DashboardOverviewView(APIView):
     permission_classes = [IsAdminUser]
@@ -124,9 +125,9 @@ class DashboardOverviewView(APIView):
 
 
 @extend_schema(
-    tags=["Analytics"],
-    summary="Crime Analytics",
-    description="Returns crime hotspots and crime type distribution.",
+    tags=["Admin — Dashboard"],
+    summary="Crime analytics",
+    description="Returns top 5 hotspot zones by report count and a full crime-type breakdown. Admin-only.",
     responses={
         200: OpenApiResponse(
             response=inline_serializer(
@@ -158,34 +159,19 @@ Example Response
 ```json
 {
   "top_hotspot_zones": [
-    {
-      "address": "Afe Babalola University Main Gate",
-      "report_count": 15
-    },
-    {
-      "address": "Fajuyi Park",
-      "report_count": 12
-    }
+    {"address": "Afe Babalola University Main Gate", "report_count": 15},
+    {"address": "Fajuyi Park", "report_count": 12}
   ],
   "crime_type_breakdown": [
-    {
-      "crime_type": "Theft",
-      "count": 61
-    },
-    {
-      "crime_type": "Assault",
-      "count": 32
-    },
-    {
-      "crime_type": "Robbery",
-      "count": 18
-    }
+    {"crime_type": "Theft", "count": 61},
+    {"crime_type": "Assault", "count": 32},
+    {"crime_type": "Robbery", "count": 18}
   ]
 }
-
+```
 """
-)
-},
+        )
+    },
 )
 class CrimeAnalyticsView(APIView):
     permission_classes = [IsAdminUser]
