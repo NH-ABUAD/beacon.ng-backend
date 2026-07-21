@@ -23,43 +23,49 @@ from drf_spectacular.utils import (
 @extend_schema(
     tags=["Authentication"],
     summary="Register a new user",
-    description="Creates a new Beacon user account.",
+    description=(
+        "Creates a new Beacon citizen account. Email is the unique login identifier — "
+        "there is no separate username field."
+    ),
     request=RegisterSerializer,
     examples=[
         OpenApiExample(
             "Registration Example",
             value={
-                "first_name": "John",
-                "last_name": "Doe",
+                "first_name": "John Doe",
                 "email": "john@example.com",
                 "phone_number": "08012345678",
+                "home_address": "15 Yaba Street, Lagos",
                 "password": "Password123!",
-                "confirm_password": "Password123!"
+                "emergency_contact_name": "Jane Doe",
+                "emergency_contact_phone": "08087654321",
             },
             request_only=True,
         )
     ],
     responses={
         201: RegisterSerializer,
-        400: OpenApiResponse(description="Validation error")
+        400: OpenApiResponse(description="Validation error"),
     },
 )
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
+
 @extend_schema(
     tags=["Authentication"],
-    summary="User Login",
-    description="Authenticate a user and receive JWT access and refresh tokens.",
+    summary="Log in",
+    description=(
+        "Authenticate with email and password. Returns `access` + `refresh` JWT tokens, "
+        "plus the full user profile (`role`, `is_staff`, emergency contacts). "
+        "Admin logins are recorded in the system audit log."
+    ),
     request=CustomTokenObtainPairSerializer,
     examples=[
         OpenApiExample(
             "Admin Login",
-            value={
-                "email": "admin@beacon.com",
-                "password": "Admin123!"
-            },
+            value={"email": "admin@beacon.com", "password": "Admin123!"},
             request_only=True,
         )
     ],
@@ -71,21 +77,15 @@ class LoginView(TokenObtainPairView):
 
 @extend_schema(
     tags=["Authentication"],
-    summary="Forgot Password",
-    description="Send a password reset OTP to the user's email.",
+    summary="Forgot password",
+    description=(
+        "Sends a 6-digit OTP to the account's email. Expires in 10 minutes and is single-use."
+    ),
     request=ForgotPasswordSerializer,
     examples=[
-        OpenApiExample(
-            "Forgot Password",
-            value={
-                "email": "john@example.com"
-            },
-            request_only=True,
-        )
+        OpenApiExample("Forgot Password", value={"email": "john@example.com"}, request_only=True)
     ],
-    responses={
-        200: OpenApiResponse(description="Verification code sent.")
-    }
+    responses={200: OpenApiResponse(description="Verification code sent.")},
 )
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -110,21 +110,15 @@ class ForgotPasswordView(APIView):
 @extend_schema(
     tags=["Authentication"],
     summary="Verify OTP",
-    description="Verify the password reset OTP.",
+    description=(
+        "Validates a 6-digit reset code without changing the password — useful for a "
+        "multi-step reset UI where the code is confirmed before showing the new-password screen."
+    ),
     request=VerifyOTPSerializer,
     examples=[
-        OpenApiExample(
-            "Verify OTP",
-            value={
-                "email": "john@example.com",
-                "code": "123456"
-            },
-            request_only=True,
-        )
+        OpenApiExample("Verify OTP", value={"email": "john@example.com", "code": "123456"}, request_only=True)
     ],
-    responses={
-        200: OpenApiResponse(description="OTP verified.")
-    }
+    responses={200: OpenApiResponse(description="OTP verified.")},
 )
 class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -137,12 +131,13 @@ class VerifyOTPView(APIView):
 
 @extend_schema(
     tags=["Authentication"],
-    summary="Reset Password",
-    description="Reset a user's password using a valid OTP.",
+    summary="Reset password",
+    description=(
+        "Resets the account password using a valid OTP. Requires `new_password` and "
+        "`confirm_password` to match. The OTP is marked used and cannot be reused."
+    ),
     request=ResetPasswordSerializer,
-    responses={
-        200: OpenApiResponse(description="Password reset successful.")
-    }
+    responses={200: OpenApiResponse(description="Password reset successful.")},
 )
 class ResetPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -164,7 +159,13 @@ class ResetPasswordView(APIView):
 
 
 @extend_schema(
-    summary="Current user profile",
+    tags=["User Profile"],
+    summary="Get or update my profile",
+    description=(
+        "GET returns the authenticated user's full profile including emergency contacts. "
+        "PATCH updates `first_name`, `phone_number`, or `home_address` — `email` and "
+        "`is_staff` cannot be changed here."
+    ),
     responses=UserProfileSerializer,
 )
 class MeView(generics.RetrieveUpdateAPIView):
@@ -174,8 +175,14 @@ class MeView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+
 @extend_schema(
-    summary="List users",
+    tags=["Admin — Users"],
+    summary="List all users",
+    description=(
+        "Returns every user account with `role` (Reporter / Admin / Super Admin), "
+        "`report_count`, and suspension status. Admin-only."
+    ),
     responses=UserListSerializer(many=True),
 )
 class UserListView(generics.ListAPIView):
@@ -185,9 +192,9 @@ class UserListView(generics.ListAPIView):
 
 
 @extend_schema(
-    tags=["Users"],
-    summary="Suspend or Unsuspend User",
-    description="Toggle a user's suspended status.",
+    tags=["Admin — Users"],
+    summary="Suspend or unsuspend a user",
+    description="Toggles a user's `is_suspended` status. Admin-only.",
     responses=inline_serializer(
         name="SuspendUserResponse",
         fields={
@@ -218,27 +225,24 @@ class SuspendUserView(APIView):
 
 @extend_schema(
     tags=["Authentication"],
-    summary="Logout",
-    description="Invalidate a refresh token by adding it to the blacklist.",
-    request=inline_serializer(
-        name="LogoutRequest",
-        fields={
-            "refresh": serializers.CharField()
-        },
+    summary="Log out",
+    description=(
+        "Blacklists the given `refresh` token, ending the session server-side. The `access` "
+        "token remains technically valid until it naturally expires, but can't be renewed "
+        "once the refresh token is blacklisted."
     ),
+    request=inline_serializer(name="LogoutRequest", fields={"refresh": serializers.CharField()}),
     examples=[
         OpenApiExample(
             "Logout",
-            value={
-                "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-            },
+            value={"refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."},
             request_only=True,
         )
     ],
     responses={
         200: OpenApiResponse(description="Logged out successfully."),
-        400: OpenApiResponse(description="Invalid or missing refresh token.")
-    }
+        400: OpenApiResponse(description="Invalid or missing refresh token."),
+    },
 )
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -253,17 +257,21 @@ class LogoutView(APIView):
             return Response({'detail': 'Invalid or missing refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 @extend_schema(
+    tags=["User Profile"],
     summary="Change password",
+    description=(
+        "Change password while logged in. Requires `current_password` for verification — "
+        "different from the forgot-password flow, which is for users who can't log in at all."
+    ),
     request=ChangePasswordSerializer,
+    responses={200: OpenApiResponse(description="Password changed successfully.")},
 )
 class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        serializer = ChangePasswordSerializer(
-            data=request.data, context={'request': request})
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
         user = request.user
