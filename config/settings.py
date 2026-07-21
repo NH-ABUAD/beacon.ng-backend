@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'users',
     'reports',
     'dashboard',
+    'django_extensions'
 ]
 
 MIDDLEWARE = [
@@ -136,9 +137,15 @@ EMAIL_BACKEND = config(
     'EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 DEFAULT_FROM_EMAIL = 'noreply@beacon.app'
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Beacon Reports API',
-    'DESCRIPTION': 'Crime reporting API for the Beacon application.',
-    'VERSION': '1.0.0',
+    "TITLE": "Beacon Reports API",
+    "DESCRIPTION": """
+    REST API for the Beacon Crime Reporting System.
+
+    This API allows citizens, officers, administrators, and supervisors
+    to manage crime reports, evidence, notifications, cases, and authentication.
+    """,
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 
