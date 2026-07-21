@@ -36,11 +36,20 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @staticmethod
+    def get_role(user):
+        if user.is_superuser:
+            return 'Super Admin'
+        if user.is_staff:
+            return 'Admin'
+        return 'Reporter'
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
         token['is_staff'] = user.is_staff
         token['email'] = user.email
+        token['role'] = cls.get_role(user)
         return token
 
     def validate(self, attrs):
@@ -52,6 +61,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'phone_number': self.user.phone_number,
             'home_address': self.user.home_address,
             'is_staff': self.user.is_staff,
+            'role': self.get_role(self.user),
             'emergency_contacts': [
                 {
                     'name': c.name,
