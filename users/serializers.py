@@ -36,11 +36,20 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @staticmethod
+    def get_role(user):
+        if user.is_superuser:
+            return 'Super Admin'
+        if user.is_staff:
+            return 'Admin'
+        return 'Reporter'
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
         token['is_staff'] = user.is_staff
         token['email'] = user.email
+        token['role'] = cls.get_role(user)
         return token
 
     def validate(self, attrs):
@@ -52,6 +61,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'phone_number': self.user.phone_number,
             'home_address': self.user.home_address,
             'is_staff': self.user.is_staff,
+            'role': self.get_role(self.user),
             'emergency_contacts': [
                 {
                     'name': c.name,
@@ -61,6 +71,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 for c in self.user.emergency_contacts.all()
             ],
         }
+
+        if self.user.is_staff:
+            from dashboard.models import SystemLog
+            request = self.context.get('request')
+            ip = request.META.get('REMOTE_ADDR') if request else None
+            SystemLog.objects.create(
+                admin=self.user,
+                action=f'Admin session started — {self.user.email}',
+                ip_address=ip,
+            )
+
         return data
 
 
@@ -119,4 +140,58 @@ class ResetPasswordSerializer(serializers.Serializer):
 
         data['user'] = user
         data['otp'] = otp
+        return data
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    emergency_contacts = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'first_name', 'phone_number', 'home_address',
+            'is_staff', 'emergency_contacts',
+        ]
+        read_only_fields = ['id', 'email', 'is_staff']
+
+    def get_emergency_contacts(self, obj):
+        return [
+            {'name': c.name, 'phone_number': c.phone_number,
+                'relationship': c.relationship}
+            for c in obj.emergency_contacts.all()
+        ]
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    report_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'role', 'is_staff',
+                  'is_active', 'is_suspended', 'date_joined', 'report_count']
+
+    def get_role(self, obj):
+        if obj.is_superuser:
+            return 'Super Admin'
+        if obj.is_staff:
+            return 'Admin'
+        return 'Reporter'
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Current password is incorrect.')
+        return value
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError(
+                {'confirm_password': 'Passwords do not match.'})
         return data

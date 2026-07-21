@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from rest_framework import serializers
 import random
 from django.utils import timezone
 from datetime import timedelta
@@ -32,7 +33,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, blank=True)
     home_address = models.CharField(max_length=255, blank=True)
-
+    is_suspended = models.BooleanField(default=False)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
@@ -43,17 +44,19 @@ class User(AbstractUser):
 
 
 class EmergencyContact(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='emergency_contacts')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='emergency_contacts')
     name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=20)
     relationship = models.CharField(max_length=50, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.user.email})"
-    
+
 
 class PasswordResetOTP(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reset_otps')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='reset_otps')
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
@@ -68,3 +71,10 @@ class PasswordResetOTP(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.email}"
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'phone_number',
+                  'is_staff', 'is_active', 'is_suspended', 'date_joined']
