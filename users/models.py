@@ -31,11 +31,11 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=20, blank=True)
-    home_address = models.CharField(max_length=255, blank=True)
+    phone_number = models.CharField(max_length=20, unique=True)
+    home_address = models.CharField(max_length=255)
     is_suspended = models.BooleanField(default=False)
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['phone_number', 'home_address']
 
     objects = UserManager()
 
