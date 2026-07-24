@@ -9,15 +9,21 @@ User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    phone_number = serializers.CharField(required=True)
 
     class Meta:
         model = User
         fields = ['email', 'first_name', 'password',
                   'phone_number', 'home_address']
 
+    def validate_phone_number(self, value):
+        if User.objects.filter(phone_number=value).exists():
+            raise serializers.ValidationError(
+                "This phone number is already registered.")
+        return value
+
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
+        return User.objects.create_user(**validated_data)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -47,14 +53,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'home_address': self.user.home_address,
             'is_staff': self.user.is_staff,
             'role': self.get_role(self.user),
-            'emergency_contacts': [
-                {
-                    'name': c.name,
-                    'phone_number': c.phone_number,
-                    'relationship': c.relationship,
-                }
-                for c in self.user.emergency_contacts.all()
-            ],
+            # 'emergency_contacts': [
+            #     {
+            #         'name': c.name,
+            #         'phone_number': c.phone_number,
+            #         'relationship': c.relationship,
+            #     }
+            #     for c in self.user.emergency_contacts.all()
+            # ],
         }
 
         if self.user.is_staff:
