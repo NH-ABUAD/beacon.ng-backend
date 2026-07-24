@@ -47,14 +47,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'home_address': self.user.home_address,
             'is_staff': self.user.is_staff,
             'role': self.get_role(self.user),
-            'emergency_contacts': [
-                {
-                    'name': c.name,
-                    'phone_number': c.phone_number,
-                    'relationship': c.relationship,
-                }
-                for c in self.user.emergency_contacts.all()
-            ],
+            # 'emergency_contacts': [
+            #     {
+            #         'name': c.name,
+            #         'phone_number': c.phone_number,
+            #         'relationship': c.relationship,
+            #     }
+            #     for c in self.user.emergency_contacts.all()
+            # ],
         }
 
         if self.user.is_staff:

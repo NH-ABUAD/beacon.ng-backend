@@ -7,9 +7,9 @@ from django.core.mail import send_mail
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PasswordResetOTP
+from .models import User, PasswordResetOTP, EmergencyContact
 from rest_framework.permissions import IsAdminUser
-from .serializers import ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer, UserProfileSerializer, UserListSerializer, ChangePasswordSerializer
+from .serializers import ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer, UserProfileSerializer, UserListSerializer, ChangePasswordSerializer,EmergencyContactSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.db.models import Count
@@ -37,8 +37,6 @@ from drf_spectacular.utils import (
                 "phone_number": "08012345678",
                 "home_address": "15 Yaba Street, Lagos",
                 "password": "Password123!",
-                "emergency_contact_name": "Jane Doe",
-                "emergency_contact_phone": "08087654321",
             },
             request_only=True,
         )
