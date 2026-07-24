@@ -1,9 +1,15 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework.routers import DefaultRouter
+from django.urls import include
 
 from .views import (
-    RegisterView, LoginView, ForgotPasswordView, VerifyOTPView, ResetPasswordView, MeView, UserListView, SuspendUserView, LogoutView, ChangePasswordView
+    RegisterView, LoginView, ForgotPasswordView, VerifyOTPView, ResetPasswordView, MeView, UserListView, SuspendUserView, LogoutView, ChangePasswordView, EmergencyContactViewSet
 )
+
+router = DefaultRouter()
+router.register(r'emergency-contacts', EmergencyContactViewSet,
+                basename='emergency-contact')
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -17,4 +23,5 @@ urlpatterns = [
     path('users/<int:pk>/suspend/', SuspendUserView.as_view(), name='user-suspend'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+    path('', include(router.urls)),
 ]
