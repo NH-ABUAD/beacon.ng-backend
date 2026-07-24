@@ -1,5 +1,5 @@
 # Create your views here.
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, viewsets
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
 from .serializers import RegisterSerializer
@@ -279,3 +279,19 @@ class ChangePasswordView(APIView):
         user.save()
 
         return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=["User Profile"])
+class EmergencyContactViewSet(viewsets.ModelViewSet):
+    """
+    Manage the authenticated user's emergency contacts.
+    Always scoped to the current user — nobody can see or edit anyone else's.
+    """
+    serializer_class = EmergencyContactSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return EmergencyContact.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
