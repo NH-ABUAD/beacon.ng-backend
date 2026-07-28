@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from django.urls import include
 
 from .views import (
-    RegisterView, LoginView, ForgotPasswordView, VerifyOTPView, ResetPasswordView, MeView, UserListView, SuspendUserView, LogoutView, ChangePasswordView, EmergencyContactViewSet
+    RegisterView, LoginView, ForgotPasswordView, VerifyOTPView, ResetPasswordView, MeView, UserListView, SuspendUserView, LogoutView, ChangePasswordView, EmergencyContactViewSet, AdminLoginView
 )
 
 router = DefaultRouter()
@@ -23,5 +23,6 @@ urlpatterns = [
     path('users/<int:pk>/suspend/', SuspendUserView.as_view(), name='user-suspend'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+    path('admin-login/', AdminLoginView.as_view(), name='admin-login'),
     path('', include(router.urls)),
 ]

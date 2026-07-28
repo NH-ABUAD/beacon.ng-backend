@@ -18,7 +18,13 @@ from drf_spectacular.utils import (
 from reports.models import Report
 from .models import SystemLog
 from .serializers import SystemLogSerializer
+from rest_framework.pagination import PageNumberPagination
 
+
+class SystemLogPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 @extend_schema(
     tags=["Admin — Dashboard"],
@@ -30,6 +36,7 @@ class SystemLogListView(generics.ListAPIView):
     queryset = SystemLog.objects.all()
     serializer_class = SystemLogSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = SystemLogPagination
 
 
 @extend_schema(
