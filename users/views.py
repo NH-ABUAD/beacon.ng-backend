@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import User, PasswordResetOTP, EmergencyContact
 from rest_framework.permissions import IsAdminUser
-from .serializers import ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer, UserProfileSerializer, UserListSerializer, ChangePasswordSerializer,EmergencyContactSerializer
+from .serializers import ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer, UserProfileSerializer, UserListSerializer, ChangePasswordSerializer, EmergencyContactSerializer, AdminTokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.db.models import Count
@@ -20,6 +20,8 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     OpenApiExample,
 )
+
+
 @extend_schema(
     tags=["Authentication"],
     summary="Register a new user",
@@ -81,7 +83,8 @@ class LoginView(TokenObtainPairView):
     ),
     request=ForgotPasswordSerializer,
     examples=[
-        OpenApiExample("Forgot Password", value={"email": "john@example.com"}, request_only=True)
+        OpenApiExample("Forgot Password", value={
+                       "email": "john@example.com"}, request_only=True)
     ],
     responses={200: OpenApiResponse(description="Verification code sent.")},
 )
@@ -114,7 +117,8 @@ class ForgotPasswordView(APIView):
     ),
     request=VerifyOTPSerializer,
     examples=[
-        OpenApiExample("Verify OTP", value={"email": "john@example.com", "code": "123456"}, request_only=True)
+        OpenApiExample("Verify OTP", value={
+                       "email": "john@example.com", "code": "123456"}, request_only=True)
     ],
     responses={200: OpenApiResponse(description="OTP verified.")},
 )
@@ -184,7 +188,8 @@ class MeView(generics.RetrieveUpdateAPIView):
     responses=UserListSerializer(many=True),
 )
 class UserListView(generics.ListAPIView):
-    queryset = User.objects.annotate(report_count=Count('reports')).order_by('-date_joined')
+    queryset = User.objects.annotate(
+        report_count=Count('reports')).order_by('-date_joined')
     serializer_class = UserListSerializer
     permission_classes = [IsAdminUser]
 
@@ -211,6 +216,12 @@ class SuspendUserView(APIView):
         except User.DoesNotExist:
             return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        if user.id == request.user.id:
+            return Response(
+                {'detail': 'You cannot suspend your own account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user.is_suspended = not user.is_suspended
         user.save()
 
@@ -229,7 +240,8 @@ class SuspendUserView(APIView):
         "token remains technically valid until it naturally expires, but can't be renewed "
         "once the refresh token is blacklisted."
     ),
-    request=inline_serializer(name="LogoutRequest", fields={"refresh": serializers.CharField()}),
+    request=inline_serializer(name="LogoutRequest", fields={
+                              "refresh": serializers.CharField()}),
     examples=[
         OpenApiExample(
             "Logout",
@@ -263,13 +275,15 @@ class LogoutView(APIView):
         "different from the forgot-password flow, which is for users who can't log in at all."
     ),
     request=ChangePasswordSerializer,
-    responses={200: OpenApiResponse(description="Password changed successfully.")},
+    responses={200: OpenApiResponse(
+        description="Password changed successfully.")},
 )
 class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
         user = request.user
@@ -293,3 +307,8 @@ class EmergencyContactViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class AdminLoginView(TokenObtainPairView):
+    serializer_class = AdminTokenObtainPairSerializer
+    permission_classes = [permissions.AllowAny]

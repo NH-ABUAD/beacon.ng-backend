@@ -19,7 +19,8 @@ class CrimeTypeSerializer(serializers.ModelSerializer):
 
 
 class ReportCreateSerializer(serializers.ModelSerializer):
-    crime_type = serializers.SlugRelatedField(slug_field='name', queryset=CrimeType.objects.all())
+    crime_type = serializers.SlugRelatedField(
+        slug_field='name', queryset=CrimeType.objects.all())
     reporter = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -40,7 +41,8 @@ class ReportCreateSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         )
-        read_only_fields = ('id', 'tracking_code', 'status', 'reporter', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'tracking_code', 'status',
+                            'reporter', 'created_at', 'updated_at')
 
     def validate_description(self, value):
         validate_description(value)
@@ -54,10 +56,16 @@ class ReportCreateSerializer(serializers.ModelSerializer):
         validate_coordinate('longitude', value)
         return value
 
+
     def validate(self, attrs):
         request = self.context.get('request')
         anonymous = attrs.get('anonymous', False)
         user = getattr(request, 'user', None)
+
+        if user and user.is_authenticated and getattr(user, 'is_suspended', False):
+            raise serializers.ValidationError(
+                {'detail': 'Your account is suspended and cannot submit new reports.'}
+            )
 
         if not user or not user.is_authenticated:
             if not anonymous:
@@ -68,17 +76,18 @@ class ReportCreateSerializer(serializers.ModelSerializer):
 
         if anonymous:
             attrs['reporter'] = None
-            attrs['anonymous'] = True
         else:
             attrs['reporter'] = user
-            attrs['anonymous'] = False
 
+        attrs['anonymous'] = anonymous
         return attrs
 
 
 class ReportSerializer(serializers.ModelSerializer):
-    crime_type = serializers.SlugRelatedField(slug_field='name', read_only=True)
-    crime_type_id = serializers.IntegerField(source='crime_type.id', read_only=True)
+    crime_type = serializers.SlugRelatedField(
+        slug_field='name', read_only=True)
+    crime_type_id = serializers.IntegerField(
+        source='crime_type.id', read_only=True)
 
     class Meta:
         model = Report
@@ -98,7 +107,8 @@ class ReportSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         )
-        read_only_fields = ('id', 'tracking_code', 'created_at', 'updated_at', 'crime_type', 'crime_type_id')
+        read_only_fields = ('id', 'tracking_code', 'created_at',
+                            'updated_at', 'crime_type', 'crime_type_id')
 
     def validate_description(self, value):
         validate_description(value)
@@ -128,8 +138,10 @@ class EvidenceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Evidence
-        fields = ('id', 'file', 'file_type', 'mime_type', 'file_size', 'uploaded_at')
-        read_only_fields = ('id', 'file_type', 'mime_type', 'file_size', 'uploaded_at')
+        fields = ('id', 'file', 'file_type', 'mime_type',
+                  'file_size', 'uploaded_at')
+        read_only_fields = ('id', 'file_type', 'mime_type',
+                            'file_size', 'uploaded_at')
 
     def validate_file(self, value):
         validate_evidence_file(value)
