@@ -76,6 +76,18 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
+class AdminTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        if not self.user.is_staff:
+            raise serializers.ValidationError(
+                {"detail": "This login is for administrators only."}
+            )
+
+        return data
+
+
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
