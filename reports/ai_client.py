@@ -28,30 +28,34 @@ def classify_report(description):
 
 
 def sync_report_to_ai(description, latitude, longitude, address):
-    """
-    Forwards a created report to the AI service. Returns the AI's response
-    data (dispatch unit, translation, confidence, etc.) so it can be saved
-    locally, or None if the sync fails. Never raises.
-    """
+    from .utils import extract_state_hint
+
+    payload = {
+        'description': description,
+        'latitude': float(latitude),
+        'longitude': float(longitude),
+        'location_text': address,
+        'source': 'beacon_app',
+    }
+
+    state_hint = extract_state_hint(address)
+    if state_hint:
+        payload['state_hint'] = state_hint
+
     try:
         response = requests.post(
             f'{AI_API_BASE}/reports',
-            json={
-                'description': description,
-                'latitude': float(latitude),
-                'longitude': float(longitude),
-                'location_text': address,
-                'source': 'beacon_app',
-            },
+            json=payload,
             timeout=5,
         )
         response.raise_for_status()
-        payload = response.json()
-        if payload.get('success'):
-            return payload.get('data')
+        payload_response = response.json()
+        if payload_response.get('success'):
+            return payload_response.get('data')
         return None
     except (requests.RequestException, ValueError):
         return None
+
 
 def classify_audio(audio_file):
     """
@@ -62,7 +66,8 @@ def classify_audio(audio_file):
     try:
         response = requests.post(
             f'{AI_API_BASE}/classify-audio',
-            files={'audio': (audio_file.name, audio_file.read(), audio_file.content_type)},
+            files={'audio': (audio_file.name, audio_file.read(),
+                             audio_file.content_type)},
             timeout=30,
         )
         if response.status_code == 422:
