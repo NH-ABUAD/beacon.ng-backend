@@ -87,6 +87,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+AI_API_BASE_URL = config('AI_API_BASE_URL', default='https://crime-ai-api-fjf1.onrender.com/api')
 
 
 # Database
