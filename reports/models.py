@@ -69,6 +69,11 @@ class Report(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     anonymous = models.BooleanField(default=False)
+    recommended_dispatch_unit = models.CharField(max_length=100, blank=True)
+    detected_language = models.CharField(max_length=50, blank=True)
+    translated_description = models.TextField(blank=True)
+    ai_verification_confidence = models.FloatField(null=True, blank=True)
+    state = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_PENDING)
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
     reporter = models.ForeignKey(

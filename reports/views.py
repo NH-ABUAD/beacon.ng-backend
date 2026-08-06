@@ -7,6 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .filters import ReportFilter
 from .models import CrimeType, Evidence, Report, ReportTimeline, Notification
@@ -17,7 +18,8 @@ from .serializers import (
     ReportCreateSerializer,
     ReportSerializer,
     ReportTimelineSerializer,
-    NotificationSerializer
+    NotificationSerializer,
+    AudioReportSerializer
 )
 from .services import ReportService
 
@@ -35,9 +37,11 @@ class CrimeTypeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 @extend_schema(tags=["Reports"])
 class ReportViewSet(viewsets.ModelViewSet):
-    queryset = Report.objects.select_related('crime_type', 'reporter').prefetch_related('evidence', 'timeline')
+    queryset = Report.objects.select_related(
+        'crime_type', 'reporter').prefetch_related('evidence', 'timeline')
     serializer_class = ReportSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend,
+                       filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ReportFilter
     search_fields = ['tracking_code', 'address', 'description']
     ordering_fields = ['created_at', 'updated_at', 'priority', 'status']
@@ -87,12 +91,15 @@ class ReportViewSet(viewsets.ModelViewSet):
                 request_only=True,
             )
         ],
-        responses={201: ReportSerializer, 400: OpenApiResponse(description="Validation error")},
+        responses={201: ReportSerializer, 400: OpenApiResponse(
+            description="Validation error")},
     )
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer = self.get_serializer(
+            data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        report = ReportService.create_report(serializer.validated_data, requester=request.user if request.user.is_authenticated else None)
+        report = ReportService.create_report(
+            serializer.validated_data, requester=request.user if request.user.is_authenticated else None)
         response_serializer = ReportSerializer(report)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -120,7 +127,8 @@ class ReportViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated or not (request.user.is_staff or request.user.is_superuser):
             raise PermissionDenied('Only administrators can update reports.')
 
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -165,7 +173,8 @@ class ReportViewSet(viewsets.ModelViewSet):
             "Public lookup of a report's status and full timeline using its tracking code "
             "(e.g. `BCR-RJKWXO`), rather than its internal ID. No authentication required."
         ),
-        responses={200: OpenApiResponse(description="Tracking code, status, and timeline entries.")},
+        responses={200: OpenApiResponse(
+            description="Tracking code, status, and timeline entries.")},
     )
     @action(detail=False, methods=['get'], url_path='track/(?P<tracking_code>[^/.]+)')
     def track(self, request, tracking_code=None):
@@ -186,11 +195,13 @@ class ReportViewSet(viewsets.ModelViewSet):
             "Returns latitude, longitude, crime type, priority, and status for up to 100 "
             "reports with a set location — feeds the interactive crime map."
         ),
-        responses={200: OpenApiResponse(description="List of {latitude, longitude, crime_type, priority, status}.")},
+        responses={200: OpenApiResponse(
+            description="List of {latitude, longitude, crime_type, priority, status}.")},
     )
     @action(detail=False, methods=['get'], url_path='crime-map')
     def crime_map(self, request):
-        reports = self.queryset.filter(latitude__isnull=False, longitude__isnull=False)[:100]
+        reports = self.queryset.filter(
+            latitude__isnull=False, longitude__isnull=False)[:100]
         data = [
             {
                 'latitude': float(report.latitude),
@@ -215,7 +226,8 @@ class ReportViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='evidence')
     def evidence(self, request, pk=None):
         report = self.get_object()
-        serializer = EvidenceSerializer(data=request.data, context={'report': report})
+        serializer = EvidenceSerializer(
+            data=request.data, context={'report': report})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -223,8 +235,10 @@ class ReportViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="Update report status (Admin)",
         description="Manually set a report's status, with an optional note. Admin-only.",
-        request=OpenApiExample("Status update", value={"status": "Under Investigation", "note": "Assigned to field officer."}, request_only=True),
-        responses={200: OpenApiResponse(description="Updated status."), 400: OpenApiResponse(description="Invalid status.")},
+        request=OpenApiExample("Status update", value={
+                               "status": "Under Investigation", "note": "Assigned to field officer."}, request_only=True),
+        responses={200: OpenApiResponse(description="Updated status."), 400: OpenApiResponse(
+            description="Invalid status.")},
     )
     @action(detail=True, methods=['patch'], url_path='status')
     def update_status(self, request, pk=None):
@@ -233,7 +247,8 @@ class ReportViewSet(viewsets.ModelViewSet):
         note = request.data.get('note', '')
         if new_status not in dict(Report.STATUS_CHOICES):
             return Response({'status': 'Invalid status.'}, status=status.HTTP_400_BAD_REQUEST)
-        ReportService.update_status(report, new_status, updated_by=request.user if request.user.is_authenticated else None, note=note)
+        ReportService.update_status(
+            report, new_status, updated_by=request.user if request.user.is_authenticated else None, note=note)
         return Response({'status': new_status})
 
     @extend_schema(
@@ -245,7 +260,8 @@ class ReportViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='verify')
     def verify(self, request, pk=None):
         report = self.get_object()
-        ReportService.update_status(report, Report.STATUS_VERIFIED, updated_by=request.user if request.user.is_authenticated else None, note='Verified by admin.')
+        ReportService.update_status(report, Report.STATUS_VERIFIED,
+                                    updated_by=request.user if request.user.is_authenticated else None, note='Verified by admin.')
         return Response({'status': Report.STATUS_VERIFIED})
 
     @extend_schema(
@@ -257,7 +273,8 @@ class ReportViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
         report = self.get_object()
-        ReportService.update_status(report, Report.STATUS_REJECTED, updated_by=request.user if request.user.is_authenticated else None, note='Rejected by admin.')
+        ReportService.update_status(report, Report.STATUS_REJECTED,
+                                    updated_by=request.user if request.user.is_authenticated else None, note='Rejected by admin.')
         return Response({'status': Report.STATUS_REJECTED})
 
 
@@ -289,3 +306,32 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.UpdateModelMixin, viewse
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
+
+
+class AudioReportView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    @extend_schema(
+        summary="Submit a crime report via voice recording",
+        description="Upload an audio recording describing a crime. Transcribed and classified by the AI service.",
+        tags=["Reports"],
+    )
+    def post(self, request):
+        serializer = AudioReportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        print("✓ AudioReportSerializer passed")
+
+        try:
+            report = ReportService.create_report_from_audio(
+                audio_file=serializer.validated_data['audio'],
+                address=serializer.validated_data['address'],
+                latitude=serializer.validated_data['latitude'],
+                longitude=serializer.validated_data['longitude'],
+                requester=request.user if request.user.is_authenticated else None,
+                anonymous=serializer.validated_data['anonymous'],
+            )
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        return Response(ReportSerializer(report).data, status=status.HTTP_201_CREATED)

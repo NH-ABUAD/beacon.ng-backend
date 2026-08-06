@@ -20,7 +20,10 @@ class CrimeTypeSerializer(serializers.ModelSerializer):
 
 class ReportCreateSerializer(serializers.ModelSerializer):
     crime_type = serializers.SlugRelatedField(
-        slug_field='name', queryset=CrimeType.objects.all())
+        slug_field='name', queryset=CrimeType.objects.all(), required=False
+    )
+    # crime_type = serializers.SlugRelatedField(
+    #     slug_field='name', queryset=CrimeType.objects.all())
     reporter = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -40,9 +43,17 @@ class ReportCreateSerializer(serializers.ModelSerializer):
             'reporter',
             'created_at',
             'updated_at',
+            'recommended_dispatch_unit',
+            'detected_language',
+            'translated_description',
+            'ai_verification_confidence',
+            'state',
         )
-        read_only_fields = ('id', 'tracking_code', 'status',
-                            'reporter', 'created_at', 'updated_at')
+        read_only_fields = (
+            'id', 'tracking_code', 'created_at', 'updated_at', 'crime_type', 'crime_type_id',
+            'recommended_dispatch_unit', 'detected_language', 'translated_description',
+            'ai_verification_confidence', 'state',
+        )
 
     def validate_description(self, value):
         validate_description(value)
@@ -55,7 +66,6 @@ class ReportCreateSerializer(serializers.ModelSerializer):
     def validate_longitude(self, value):
         validate_coordinate('longitude', value)
         return value
-
 
     def validate(self, attrs):
         request = self.context.get('request')
@@ -106,6 +116,11 @@ class ReportSerializer(serializers.ModelSerializer):
             'priority',
             'created_at',
             'updated_at',
+            'recommended_dispatch_unit',
+            'detected_language',
+            'translated_description',
+            'ai_verification_confidence',
+            'state',
         )
         read_only_fields = ('id', 'tracking_code', 'created_at',
                             'updated_at', 'crime_type', 'crime_type_id')
@@ -164,3 +179,11 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ['id', 'title', 'message', 'is_read', 'created_at']
         read_only_fields = ['id', 'title', 'message', 'created_at']
+
+
+class AudioReportSerializer(serializers.Serializer):
+    audio = serializers.FileField()
+    address = serializers.CharField()
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    anonymous = serializers.BooleanField(default=False)

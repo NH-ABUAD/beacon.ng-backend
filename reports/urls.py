@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import CrimeTypeViewSet, EvidenceViewSet, ReportViewSet, NotificationViewSet
+from .views import CrimeTypeViewSet, EvidenceViewSet, ReportViewSet, NotificationViewSet, AudioReportView
 
 router = DefaultRouter()
 router.register(r'crime-types', CrimeTypeViewSet, basename='crime-type')
@@ -10,5 +10,6 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'', ReportViewSet, basename='report')
 
 urlpatterns = [
+    path('from-audio/', AudioReportView.as_view(), name='report-from-audio'),
     path('', include(router.urls)),
 ]

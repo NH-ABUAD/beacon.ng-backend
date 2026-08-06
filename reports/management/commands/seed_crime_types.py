@@ -1,5 +1,4 @@
 from django.core.management.base import BaseCommand
-
 from reports.models import CrimeType
 
 
@@ -8,10 +7,23 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         crime_types = [
-            'Robbery',
-            'Theft',
-            'Kidnapping',
             'Armed Robbery',
+            'Theft',
+            'Domestic Violence',
+            'Burglary',
+            'Cybercrime',
+            'Murder',
+            'Kidnapping',
+            'Drug Offense',
+            'Sexual Assault',
+            'Assault',
+            'Traffic Incident',
+            'Terrorism',
+            'Fraud',
+            'Missing Person',
+            'Vandalism',
+            'Fire Incident',
+            'Public Disturbance',
             'Other',
         ]
         for name in crime_types:
