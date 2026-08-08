@@ -93,11 +93,27 @@ class ReportCreateSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class ReporterSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "full_name",
+        )
+
+    def get_full_name(self, obj):
+        return obj.first_name
+
+
 class ReportSerializer(serializers.ModelSerializer):
     crime_type = serializers.SlugRelatedField(
         slug_field='name', read_only=True)
     crime_type_id = serializers.IntegerField(
         source='crime_type.id', read_only=True)
+
+    reporter = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -114,6 +130,7 @@ class ReportSerializer(serializers.ModelSerializer):
             'anonymous',
             'status',
             'priority',
+            'reporter',
             'created_at',
             'updated_at',
             'recommended_dispatch_unit',
@@ -136,6 +153,21 @@ class ReportSerializer(serializers.ModelSerializer):
     def validate_longitude(self, value):
         validate_coordinate('longitude', value)
         return value
+
+
+class AdminReportSerializer(ReportSerializer):
+    reporter = serializers.SerializerMethodField()
+
+    class Meta(ReportSerializer.Meta):
+        fields = ReportSerializer.Meta.fields + (
+            "reporter",
+        )
+
+    def get_reporter(self, obj):
+        if obj.anonymous or obj.reporter is None:
+            return None
+
+        return ReporterSerializer(obj.reporter).data
 
 
 class ReportTimelineSerializer(serializers.ModelSerializer):
