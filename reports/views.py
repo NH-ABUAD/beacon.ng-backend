@@ -19,7 +19,8 @@ from .serializers import (
     ReportSerializer,
     ReportTimelineSerializer,
     NotificationSerializer,
-    AudioReportSerializer
+    AudioReportSerializer,
+    AdminReportSerializer
 )
 from .services import ReportService
 
@@ -63,8 +64,12 @@ class ReportViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action == "create":
             return ReportCreateSerializer
+
+        if self.request.user.is_authenticated and self.request.user.is_staff:
+            return AdminReportSerializer
+
         return ReportSerializer
 
     @extend_schema(
