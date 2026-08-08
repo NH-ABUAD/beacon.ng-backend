@@ -113,7 +113,6 @@ class ReportSerializer(serializers.ModelSerializer):
     crime_type_id = serializers.IntegerField(
         source='crime_type.id', read_only=True)
 
-    reporter = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -130,7 +129,6 @@ class ReportSerializer(serializers.ModelSerializer):
             'anonymous',
             'status',
             'priority',
-            'reporter',
             'created_at',
             'updated_at',
             'recommended_dispatch_unit',
